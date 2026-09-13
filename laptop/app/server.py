@@ -37,6 +37,9 @@ class RemoteViewServer:
         self.local_ip = "127.0.0.1"
         self.port = config.PORT
         # Gemini multi-key pool (PRO key first, then normal keys)
+        self.key_pool = self.get_key_pool()
+        self.app = self._build_app()
+
     def get_key_pool(self):
         """Return dynamic key pool with user custom DB keys if present, else config default keys."""
         from .key_pool import GeminiKeyPool
