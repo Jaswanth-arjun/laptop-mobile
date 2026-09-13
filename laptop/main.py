@@ -15,6 +15,12 @@ import sys
 import threading
 import webbrowser
 
+# Fix PyInstaller --windowed mode where sys.stdout / sys.stderr are None
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
 import uvicorn
 
 from app import config
@@ -190,7 +196,7 @@ def main() -> int:
     print("  Keep this window open. Press Ctrl+C to stop.", flush=True)
     print("", flush=True)
 
-    uvicorn.run(app, host=config.HOST, port=port, log_level="warning", ws_ping_interval=20, ws_ping_timeout=20)
+    uvicorn.run(app, host=config.HOST, port=port, log_config=None, ws_ping_interval=20, ws_ping_timeout=20)
     return 0
 
 
