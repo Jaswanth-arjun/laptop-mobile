@@ -37,6 +37,40 @@ def find_free_port(start: int, span: int) -> int:
     raise OSError(f"No free port found in range {start}-{start + span - 1}. Close the program using port {start} or set RV_PORT.")
 
 
+def open_app_window(url: str):
+    """Launch dashboard as a standalone desktop app window (frameless app mode)."""
+    import shutil
+    import subprocess
+
+    edge_paths = [
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        shutil.which("msedge"),
+    ]
+    for ep in edge_paths:
+        if ep and os.path.exists(ep):
+            try:
+                subprocess.Popen([ep, f"--app={url}", "--window-size=1220,820"])
+                return
+            except Exception:
+                pass
+
+    chrome_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        shutil.which("chrome"),
+    ]
+    for cp in chrome_paths:
+        if cp and os.path.exists(cp):
+            try:
+                subprocess.Popen([cp, f"--app={url}", "--window-size=1220,820"])
+                return
+            except Exception:
+                pass
+
+    webbrowser.open(url)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="RemoteView laptop server")
     parser.add_argument("--setup-firewall", action="store_true", help="Add Windows Firewall rule (requires admin)")
@@ -150,8 +184,8 @@ def main() -> int:
     app.router.lifespan_context = lifespan
     config.PORT = port
 
-    # open dashboard in the default browser
-    threading.Timer(1.0, lambda: webbrowser.open(admin_url)).start()
+    # open dashboard in dedicated app window mode
+    threading.Timer(1.2, lambda: open_app_window(admin_url)).start()
 
     print("  Keep this window open. Press Ctrl+C to stop.", flush=True)
     print("", flush=True)
