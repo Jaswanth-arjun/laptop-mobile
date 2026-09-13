@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RemoteView Dashboard</title>
+<style>
+  :root { --bg:#0f1420; --card:#1a2233; --line:#2a3550; --text:#e8edf7; --muted:#93a0b8; --accent:#4f7cff; --green:#2fbf71; --red:#ef5350; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:24px; }
+  .wrap { max-width:860px; margin:0 auto; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; }
+  .col { flex:1; min-width:260px; }
+  .kv { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; }
+  .kv span:first-child { color:var(--muted); }
+  .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+  .pill.on { background:rgba(47,191,113,.15); color:var(--green); }
+  .pill.off { background:rgba(239,83,80,.15); color:var(--red); }
+  .pill.wait { background:rgba(79,124,255,.15); color:var(--accent); }
+  button { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; font-weight:600; }
+  button:hover { filter:brightness(1.1); }
+  button.secondary { background:#2a3550; }
+  button.danger { background:var(--red); }
+  button.stop { background:#37474f; }
+  .code { font-size:44px; font-weight:800; letter-spacing:10px; text-align:center; color:var(--accent); margin:8px 0; font-variant-numeric:tabular-nums; }
+  .qr { display:block; margin:12px auto; background:#fff; padding:10px; border-radius:10px; }
+  .center { text-align:center; }
+  .muted { color:var(--muted); font-size:13px; }
+  .device { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:14px; gap:8px; }
+  .device:last-child { border-bottom:none; }
+  .device .meta { color:var(--muted); font-size:12px; }
+  .settings-grid { display:grid; grid-template-columns:auto 1fr; gap:10px 14px; align-items:center; font-size:14px; }
+  input[type=number] { background:#0f1420; border:1px solid var(--line); color:var(--text); border-radius:6px; padding:7px 10px; width:100px; font-size:14px; }
+  .banner { padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:13px; }
+  .banner.red { background:rgba(239,83,80,.15); color:#ff8a80; }
+  .banner.yellow { background:rgba(255,193,7,.12); color:#ffd54f; }
+  .actions { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  .toast { position:fixed; bottom:20px; right:20px; background:#2a3550; padding:12px 18px; border-radius:8px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; }
+  .toast.show { opacity:1; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>RemoteView</h1>
+  <div class="sub">View and capture this laptop's screen from your phone — same Wi-Fi only.</div>
+  <div id="banner"></div>
+
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <div class="kv"><span>Device name</span><b id="devname">–</b></div>
+        <div class="kv"><span>Local IP</span><b id="ip">–</b></div>
+        <div class="kv"><span>Port</span><b id="port">–</b></div>
+        <div class="kv"><span>Resolution</span><b id="res">–</b></div>
+        <div class="kv"><span>Screen sharing</span><b id="sharing" class="pill off">OFF</b></div>
+      </div>
+      <div class="col center">
+        <div id="qrbox"></div>
+        <div class="code" id="code">------</div>
+        <div class="muted" id="exp">Pairing code expires in –</div>
+        <div class="actions" style="justify-content:center">
+          <button id="newcode">New pairing code</button>
+        </div>
+        <div class="muted" style="margin-top:8px">Scan the QR with your phone camera, or type the code in the RemoteView mobile app.</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="toggle-sharing">Start screen sharing</button>
+      <button id="open-mobile" class="secondary">Open mobile app page</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:16px;margin-bottom:8px">Connected devices</h2>
+    <div id="connected"><div class="muted">None</div></div>
+    <div class="actions"><button class="danger" id="revoke-all">Disconnect all devices &amp; revoke access</button></div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:16px;margin-bottom:8px">Paired devices (saved access)</h2>
+    <div id="sessions"><div class="muted">None</div></div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:16px;margin-bottom:12px">Streaming settings</h2>
+    <div class="settings-grid">
+      <label>FPS cap</label><input type="number" id="fps" min="1" max="30">
+      <label>JPEG quality</label><input type="number" id="quality" min="10" max="95">
+      <label>Stream scale %</label><input type="number" id="scale" min="15" max="100">
+      <label>Monitor</label><input type="number" id="monitor" min="0" max="4">
+    </div>
+    <div class="actions"><button id="save-settings">Save settings</button></div>
+    <div class="muted" style="margin-top:8px">Phones can also lower quality automatically from the mobile app. Scale 100% = full resolution.</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = id => document.getElementById(id);
+let pollTimer = null, countdown = 0;
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+async function api(path, opts){
+  const r = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  if(!r.ok){ let d=''; try{ d=(await r.json()).detail; }catch(e){} throw new Error(d||('HTTP '+r.status)); }
+  return r.json();
+}
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+async function pairingStart(ttl){
+  try{
+    await api('/api/admin/pairing/start',{method:'POST',body:JSON.stringify(ttl?{ttl}: {})});
+    await refresh();
+    toast('New pairing code generated');
+  }catch(e){ toast('Failed: '+e.message); }
+}
+
+async function refresh(){
+  let s;
+  try { s = await api('/api/admin/status'); } catch(e){ $('banner').className='banner red'; $('banner').textContent='Cannot reach the local server: '+e.message; return; }
+  $('banner').textContent=''; $('banner').className='';
+  $('devname').textContent = s.laptop_name;
+  $('ip').textContent = s.local_ip;
+  $('port').textContent = s.port;
+  $('res').textContent = s.resolution.width + ' x ' + s.resolution.height;
+  const sh = $('sharing');
+  sh.textContent = s.sharing ? 'ACTIVE' : 'OFF';
+  sh.className = 'pill ' + (s.sharing ? 'on' : 'off');
+  $('toggle-sharing').textContent = s.sharing ? 'Stop screen sharing' : 'Start screen sharing';
+
+  // banner about capture errors
+  if(s.sharing && s.capture_error){
+    $('banner').className='banner yellow';
+    $('banner').textContent='Screen capture problem: '+s.capture_error;
+  }
+
+  // pairing
+  const p = s.pairing;
+  if(p.active){
+    $('code').textContent = p.code;
+    countdown = p.expires_in;
+    const mobileUrl = 'http://' + s.local_ip + ':' + s.port + '/pair?code=' + p.code;
+    $('qrbox').innerHTML = '<img class="qr" alt="Pairing QR" src="/api/admin/qr?u=' + encodeURIComponent(mobileUrl) + '">';
+    $('exp').textContent = 'Pairing code expires in ' + p.expires_in + 's';
+  } else {
+    $('code').textContent = '------';
+    $('qrbox').innerHTML = '';
+    $('exp').textContent = 'No active pairing code';
+  }
+
+  // connected clients
+  const con = s.connected || [];
+  $('connected').innerHTML = con.length
+    ? con.map(c => '<div class="device"><div><b>' + esc(c.device_name) + '</b><div class="meta">connected ' +
+        new Date(c.connected_at*1000).toLocaleTimeString() + (c.paused?' · paused':'') + '</div></div>' +
+        '<button class="stop" onclick="kick(\'' + esc(c.device_name) + '\')">Disconnect</button></div>').join('')
+    : '<div class="muted">None</div>';
+
+  // paired sessions
+  const sess = s.sessions || [];
+  $('sessions').innerHTML = sess.length
+    ? sess.map(v => '<div class="device"><div><b>' + esc(v.device_name) + '</b><div class="meta">paired ' +
+        new Date(v.created_at*1000).toLocaleString() + '</div></div>' +
+        '<button class="stop" onclick="revokeDevice(\'' + esc(v.device_id) + '\')">Remove</button></div>').join('')
+    : '<div class="muted">None</div>';
+}
+
+async function kick(name){
+  const s = await api('/api/admin/status');
+  const sess = (s.sessions||[]).find(v => v.device_name === name);
+  if(!sess){ toast('Device not found'); return; }
+  await api('/api/admin/revoke/' + sess.device_id, {method:'POST'});
+  toast('Disconnected ' + name);
+  refresh();
+}
+
+async function revokeDevice(id){
+  await api('/api/admin/revoke/' + id, {method:'POST'});
+  toast('Device removed');
+  refresh();
+}
+
+$('newcode').onclick = () => pairingStart();
+$('toggle-sharing').onclick = async () => {
+  const on = $('toggle-sharing').textContent.startsWith('Start');
+  await api('/api/admin/sharing', {method:'POST', body:JSON.stringify({enabled:on})});
+  toast(on ? 'Screen sharing started' : 'Screen sharing stopped');
+  refresh();
+};
+$('revoke-all').onclick = async () => {
+  await api('/api/admin/revoke-all', {method:'POST'});
+  toast('All devices disconnected and revoked');
+  refresh();
+};
+$('open-mobile').onclick = () => window.open(location.origin + '/', '_blank');
+$('save-settings').onclick = async () => {
+  const body = {
+    fps: parseInt($('fps').value)||12,
+    quality: parseInt($('quality').value)||60,
+    scale: (parseInt($('scale').value)||100)/100,
+    monitor: parseInt($('monitor').value)||0,
+  };
+  await api('/api/admin/settings', {method:'POST', body:JSON.stringify(body)});
+  toast('Settings saved');
+  refresh();
+};
+
+async function loadSettings(){
+  const s = await api('/api/admin/settings');
+  $('fps').value = s.fps; $('quality').value = s.quality;
+  $('scale').value = Math.round(s.scale*100); $('monitor').value = s.monitor;
+}
+
+setInterval(()=>{ if(countdown>0){ countdown--; $('exp').textContent='Pairing code expires in '+countdown+'s'; } }, 1000);
+refresh(); loadSettings();
+pollTimer = setInterval(refresh, 5000);
+</script>
+</body>
+</html>

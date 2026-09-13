@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+mobile/dist/
+
+# Secrets & local config - never commit these
+.env
+*.env
+!.env.example
+
+# App data
+laptop/data/
+*.db
+*.sqlite3
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
