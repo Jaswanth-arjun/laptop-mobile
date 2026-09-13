@@ -4,170 +4,1219 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RemoteView Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0f1420; --card:#1a2233; --line:#2a3550; --text:#e8edf7; --muted:#93a0b8; --accent:#4f7cff; --green:#2fbf71; --red:#ef5350; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:24px; }
-  .wrap { max-width:860px; margin:0 auto; }
-  h1 { font-size:22px; margin-bottom:4px; }
-  .sub { color:var(--muted); font-size:13px; margin-bottom:20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; }
-  .row { display:flex; gap:16px; flex-wrap:wrap; }
-  .col { flex:1; min-width:260px; }
-  .kv { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; }
-  .kv span:first-child { color:var(--muted); }
-  .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
-  .pill.on { background:rgba(47,191,113,.15); color:var(--green); }
-  .pill.off { background:rgba(239,83,80,.15); color:var(--red); }
-  .pill.wait { background:rgba(79,124,255,.15); color:var(--accent); }
-  button { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; font-weight:600; }
-  button:hover { filter:brightness(1.1); }
-  button.secondary { background:#2a3550; }
-  button.danger { background:var(--red); }
-  button.stop { background:#37474f; }
-  .code { font-size:44px; font-weight:800; letter-spacing:10px; text-align:center; color:var(--accent); margin:8px 0; font-variant-numeric:tabular-nums; }
-  .qr { display:block; margin:12px auto; background:#fff; padding:10px; border-radius:10px; }
-  .center { text-align:center; }
-  .muted { color:var(--muted); font-size:13px; }
-  .device { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:14px; gap:8px; }
-  .device:last-child { border-bottom:none; }
-  .device .meta { color:var(--muted); font-size:12px; }
-  .settings-grid { display:grid; grid-template-columns:auto 1fr; gap:10px 14px; align-items:center; font-size:14px; }
-  input[type=number] { background:#0f1420; border:1px solid var(--line); color:var(--text); border-radius:6px; padding:7px 10px; width:100px; font-size:14px; }
-  .banner { padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:13px; }
-  .banner.red { background:rgba(239,83,80,.15); color:#ff8a80; }
-  .banner.yellow { background:rgba(255,193,7,.12); color:#ffd54f; }
-  .actions { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-  .toast { position:fixed; bottom:20px; right:20px; background:#2a3550; padding:12px 18px; border-radius:8px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; }
-  .toast.show { opacity:1; }
-  a { color:var(--accent); }
+  :root {
+    --bg-main: #060913;
+    --sidebar-bg: #090d1a;
+    --card-bg: #0f1629;
+    --card-inner-bg: rgba(16, 24, 45, 0.6);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(99, 102, 241, 0.25);
+    
+    --primary-blue: #3b82f6;
+    --primary-indigo: #6366f1;
+    --gradient-pink: linear-gradient(135deg, #ec4899 0%, #d946ef 50%, #8b5cf6 100%);
+    --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --success: #10b981;
+    --success-bg: rgba(16, 185, 129, 0.12);
+    --danger: #ef4444;
+    
+    --radius-xl: 18px;
+    --radius-lg: 14px;
+    --radius-md: 10px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    overflow-x: hidden;
+  }
+
+  /* ────────────────────── Layout ────────────────────── */
+  .app-container {
+    display: flex;
+    width: 100vw;
+    min-height: 100vh;
+  }
+
+  /* Sidebar */
+  aside {
+    width: 260px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    user-select: none;
+  }
+
+  .nav-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+  }
+
+  .nav-item.active {
+    background: var(--gradient-blue);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  }
+
+  .nav-item svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .sidebar-footer {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-footer svg {
+    width: 20px;
+    height: 20px;
+    color: var(--primary-blue);
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer-text h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .sidebar-footer-text p {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Main Wrapper */
+  .main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
+  }
+
+  /* Top Navbar */
+  header {
+    height: 70px;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(9, 13, 26, 0.8);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--gradient-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  }
+
+  .brand-title h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-title p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .status-pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .icon-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+  }
+
+  /* Content Container */
+  .content {
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Tab View Sections */
+  .tab-view {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.25s ease-out;
+  }
+
+  .tab-view.active {
+    display: flex;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Banner Card */
+  .banner-card {
+    background: linear-gradient(135deg, rgba(16, 24, 48, 0.8) 0%, rgba(15, 22, 41, 0.9) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .banner-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .banner-illustration {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-blue);
+  }
+
+  .banner-text h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .banner-text h3 {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 2px 0 6px;
+  }
+
+  .banner-text p {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .banner-right {
+    display: flex;
+    align-items: center;
+  }
+
+  .sharing-active-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 12px 20px;
+    border-radius: 999px;
+  }
+
+  .sharing-active-badge .big-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 12px var(--success);
+  }
+
+  .sharing-active-badge-text h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--success);
+  }
+
+  .sharing-active-badge-text p {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  /* Grid Layout 2 Column */
+  .grid-2col {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) {
+    .grid-2col { grid-template-columns: 1fr; }
+  }
+
+  /* Component Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .card-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-icon.green { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+  .card-icon.blue { background: rgba(59, 130, 246, 0.15); color: var(--primary-blue); }
+  .card-icon.purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+
+  .card-header-text h3 {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .card-header-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* System Status List */
+  .status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--card-inner-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+  }
+
+  .status-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .item-badge-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-badge-icon.purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+  .item-badge-icon.green { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+  .item-badge-icon.blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+  .item-badge-icon.orange { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+  .item-text h4 {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .item-text p {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .status-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    transition: color 0.2s;
+  }
+
+  .copy-btn:hover { color: var(--text-primary); }
+
+  /* Buttons */
+  .btn-group {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+  }
+
+  .btn-pink {
+    background: var(--gradient-pink);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(236, 72, 153, 0.35);
+  }
+
+  .btn-pink:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 8px 24px rgba(236, 72, 153, 0.45);
+  }
+
+  .btn-blue {
+    background: var(--gradient-blue);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+  }
+
+  .btn-blue:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.45);
+  }
+
+  .btn-outline {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1.5px);
+  }
+
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+  }
+
+  .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.25);
+  }
+
+  /* Pairing Right Card */
+  .pairing-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    background: var(--card-inner-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    min-height: 280px;
+  }
+
+  .screen-graphic {
+    width: 180px;
+    height: 110px;
+    border: 2px solid rgba(59, 130, 246, 0.4);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .screen-graphic::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    width: 40px;
+    height: 10px;
+    background: rgba(59, 130, 246, 0.4);
+    border-radius: 0 0 4px 4px;
+  }
+
+  .check-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  .pairing-box h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .pairing-box p {
+    font-size: 12px;
+    color: var(--text-muted);
+    max-width: 240px;
+    margin-bottom: 16px;
+  }
+
+  .code-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 8px;
+    color: #60a5fa;
+    margin: 10px 0;
+  }
+
+  /* List of Devices */
+  .device-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .device-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--card-inner-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+  }
+
+  .device-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .device-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .device-details h4 {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .device-details p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .empty-state-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    background: var(--card-inner-bg);
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+  }
+
+  .empty-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-text h4 {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .empty-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Settings Grid */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 768px) {
+    .settings-grid { grid-template-columns: 1fr; }
+  }
+
+  .setting-input-box {
+    background: var(--card-inner-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .setting-input-box label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .setting-input-box input {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    width: 100%;
+  }
+
+  .setting-input-box input:focus {
+    border-color: var(--primary-blue);
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e293b;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>RemoteView</h1>
-  <div class="sub">View and capture this laptop's screen from your phone — same Wi-Fi only.</div>
-  <div id="banner"></div>
 
-  <div class="card">
-    <div class="row">
-      <div class="col">
-        <div class="kv"><span>Device name</span><b id="devname">–</b></div>
-        <div class="kv"><span>Local IP</span><b id="ip">–</b></div>
-        <div class="kv"><span>Port</span><b id="port">–</b></div>
-        <div class="kv"><span>Resolution</span><b id="res">–</b></div>
-        <div class="kv"><span>Screen sharing</span><b id="sharing" class="pill off">OFF</b></div>
-      </div>
-      <div class="col center">
-        <div id="qrbox"></div>
-        <div class="code" id="code">------</div>
-        <div class="muted" id="exp">Pairing code expires in –</div>
-        <div class="actions" style="justify-content:center">
-          <button id="newcode">New pairing code</button>
+<div class="app-container">
+  <!-- Sidebar -->
+  <aside>
+    <div>
+      <div class="brand-logo">
+        <div class="logo-icon">RV</div>
+        <div class="brand-title">
+          <h1>RemoteView</h1>
+          <p>v2.4 Pro</p>
         </div>
-        <div class="muted" style="margin-top:8px">Scan the QR with your phone camera, or type the code in the RemoteView mobile app.</div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#dashboard" class="nav-item active" onclick="switchTab('dashboard', event)">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Dashboard
+        </a>
+        <a href="#devices" class="nav-item" onclick="switchTab('devices', event)">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Devices
+        </a>
+        <a href="#sessions" class="nav-item" onclick="switchTab('sessions', event)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Sessions
+        </a>
+        <a href="#settings" class="nav-item" onclick="switchTab('settings', event)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Settings
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      <div class="sidebar-footer-text">
+        <h4>Secure &amp; Encrypted</h4>
+        <p>Your privacy matters</p>
       </div>
     </div>
-    <div class="actions">
-      <button id="toggle-sharing">Start screen sharing</button>
-      <button id="open-mobile" class="secondary">Open mobile app page</button>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="main-wrapper">
+    <!-- Top Header -->
+    <header>
+      <div class="brand-title">
+        <h1 id="page-title">Dashboard</h1>
+        <p id="page-subtitle">Real-time screen sharing &amp; AI interaction hub</p>
+      </div>
+
+      <div class="header-actions">
+        <div class="status-pill" id="header-status">
+          <span class="dot"></span>
+          <span id="header-status-text">Screen Sharing Active</span>
+        </div>
+        <button class="icon-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        </button>
+        <button class="icon-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Tabs -->
+    <div class="content">
+      <div id="banner"></div>
+
+      <!-- TAB 1: DASHBOARD VIEW -->
+      <div id="view-dashboard" class="tab-view active">
+        <!-- Welcome Banner -->
+        <div class="banner-card">
+          <div class="banner-left">
+            <div class="banner-illustration">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </div>
+            <div class="banner-text">
+              <h2>Welcome Back!</h2>
+              <h3>Your RemoteView Dashboard</h3>
+              <p>Connect &nbsp;·&nbsp; Share &nbsp;·&nbsp; Control</p>
+            </div>
+          </div>
+
+          <div class="banner-right">
+            <div class="sharing-active-badge">
+              <span class="big-dot"></span>
+              <div class="sharing-active-badge-text">
+                <h4>Screen Sharing Active</h4>
+                <p>Your device is currently being shared</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Column Grid (Status + Pairing) -->
+        <div class="grid-2col">
+          <!-- Left: System Status -->
+          <div class="card">
+            <div>
+              <div class="card-header">
+                <div class="card-header-title">
+                  <div class="card-icon green">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                  </div>
+                  <div class="card-header-text">
+                    <h3>System Status</h3>
+                  </div>
+                </div>
+                <span class="status-pill" style="padding:3px 10px; font-size:11px;">Online</span>
+              </div>
+
+              <div class="status-list">
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <div class="item-badge-icon purple">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    </div>
+                    <div class="item-text">
+                      <h4>Device Name</h4>
+                      <p>Your current device</p>
+                    </div>
+                  </div>
+                  <div class="status-val">
+                    <span id="devname">LAPTOP-RHR79PU1</span>
+                    <button class="copy-btn" onclick="copyText('devname')">📋</button>
+                  </div>
+                </div>
+
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <div class="item-badge-icon green">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </div>
+                    <div class="item-text">
+                      <h4>Local IP Address</h4>
+                      <p>Your network IP</p>
+                    </div>
+                  </div>
+                  <div class="status-val">
+                    <span id="ip">10.85.182.142</span>
+                    <button class="copy-btn" onclick="copyText('ip')">📋</button>
+                  </div>
+                </div>
+
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <div class="item-badge-icon blue">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line></svg>
+                    </div>
+                    <div class="item-text">
+                      <h4>Port</h4>
+                      <p>Listening port</p>
+                    </div>
+                  </div>
+                  <div class="status-val">
+                    <span id="port">8756</span>
+                    <button class="copy-btn" onclick="copyText('port')">📋</button>
+                  </div>
+                </div>
+
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <div class="item-badge-icon orange">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    </div>
+                    <div class="item-text">
+                      <h4>Screen Resolution</h4>
+                      <p>Current display resolution</p>
+                    </div>
+                  </div>
+                  <div class="status-val">
+                    <span id="res">1920 × 1080</span>
+                    <button class="copy-btn" onclick="copyText('res')">📋</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button class="btn btn-pink" id="toggle-sharing">⏹ Stop Screen Sharing</button>
+              <button class="btn btn-outline" id="open-mobile">🌐 Open Web App</button>
+            </div>
+          </div>
+
+          <!-- Right: Pairing & QR -->
+          <div class="card">
+            <div class="pairing-box">
+              <div id="qrbox"></div>
+              <div class="screen-graphic" id="graphic-box">
+                <div class="check-icon">✓</div>
+              </div>
+              <div class="code-display" id="code">------</div>
+              <h4 id="pairing-title">No active code</h4>
+              <p id="exp">Share this code to connect a new device</p>
+              <button class="btn btn-outline" id="newcode">🔄 Refresh Code</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: DEVICES VIEW -->
+      <div id="view-devices" class="tab-view">
+        <div class="card">
+          <div class="card-header" style="margin-bottom:18px;">
+            <div class="card-header-title">
+              <div class="card-icon green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              </div>
+              <div class="card-header-text">
+                <h3>Connected Devices</h3>
+                <p>Manage devices currently streaming your screen</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="connected-list">
+            <div class="empty-state-box">
+              <div class="empty-icon">📱</div>
+              <div class="empty-text">
+                <h4>No active connections</h4>
+                <p>Your device is not connected to any other device right now.</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <button class="btn btn-danger" id="revoke-all">🔗 Disconnect All &amp; Revoke Access</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: SESSIONS VIEW -->
+      <div id="view-sessions" class="tab-view">
+        <div class="card">
+          <div class="card-header" style="margin-bottom:18px;">
+            <div class="card-header-title">
+              <div class="card-icon purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div class="card-header-text">
+                <h3>Paired Sessions (Saved Access)</h3>
+                <p>Saved paired devices with access tokens</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="sessions-list">
+            <div class="empty-state-box">
+              <div class="empty-icon">💻</div>
+              <div class="empty-text">
+                <h4>No paired devices</h4>
+                <p>Pair your devices for faster and easier access.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: SETTINGS VIEW -->
+      <div id="view-settings" class="tab-view">
+        <div class="card">
+          <div class="card-header" style="margin-bottom:20px;">
+            <div class="card-header-title">
+              <div class="card-icon blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              </div>
+              <div class="card-header-text">
+                <h3>Streaming &amp; Capture Settings</h3>
+                <p>Configure screen encoding performance and display monitor</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-input-box">
+              <label for="fps"><span>Target Frame Rate (FPS)</span><span>1 - 30</span></label>
+              <input type="number" id="fps" min="1" max="30" value="12">
+            </div>
+            <div class="setting-input-box">
+              <label for="quality"><span>JPEG Quality (%)</span><span>10 - 95</span></label>
+              <input type="number" id="quality" min="10" max="95" value="60">
+            </div>
+            <div class="setting-input-box">
+              <label for="scale"><span>Resolution Scale (%)</span><span>15 - 100</span></label>
+              <input type="number" id="scale" min="15" max="100" value="100">
+            </div>
+            <div class="setting-input-box">
+              <label for="monitor"><span>Monitor Index</span><span>0 = Primary</span></label>
+              <input type="number" id="monitor" min="0" max="4" value="0">
+            </div>
+          </div>
+
+          <div>
+            <button class="btn btn-blue" id="save-settings">💾 Save Settings</button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <div class="card">
-    <h2 style="font-size:16px;margin-bottom:8px">Connected devices</h2>
-    <div id="connected"><div class="muted">None</div></div>
-    <div class="actions"><button class="danger" id="revoke-all">Disconnect all devices &amp; revoke access</button></div>
-  </div>
-
-  <div class="card">
-    <h2 style="font-size:16px;margin-bottom:8px">Paired devices (saved access)</h2>
-    <div id="sessions"><div class="muted">None</div></div>
-  </div>
-
-  <div class="card">
-    <h2 style="font-size:16px;margin-bottom:12px">Streaming settings</h2>
-    <div class="settings-grid">
-      <label>FPS cap</label><input type="number" id="fps" min="1" max="30">
-      <label>JPEG quality</label><input type="number" id="quality" min="10" max="95">
-      <label>Stream scale %</label><input type="number" id="scale" min="15" max="100">
-      <label>Monitor</label><input type="number" id="monitor" min="0" max="4">
-    </div>
-    <div class="actions"><button id="save-settings">Save settings</button></div>
-    <div class="muted" style="margin-top:8px">Phones can also lower quality automatically from the mobile app. Scale 100% = full resolution.</div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 const $ = id => document.getElementById(id);
-let pollTimer = null, countdown = 0;
+let countdown = 0;
 
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+// Tab Switcher
+function switchTab(tabId, e) {
+  if (e) e.preventDefault();
+  
+  // Update sidebar active styling
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  const activeNav = document.querySelector(`.nav-item[href="#${tabId}"]`);
+  if (activeNav) activeNav.classList.add('active');
+
+  // Hide all tab views, show target tab view
+  document.querySelectorAll('.tab-view').forEach(view => view.classList.remove('active'));
+  const targetView = $(`view-${tabId}`);
+  if (targetView) targetView.classList.add('active');
+
+  // Update Page Header Titles
+  const titles = {
+    dashboard: { title: 'Dashboard', sub: 'Real-time screen sharing & AI interaction hub' },
+    devices: { title: 'Connected Devices', sub: 'Active streaming sessions & connections' },
+    sessions: { title: 'Paired Sessions', sub: 'Saved device access tokens and history' },
+    settings: { title: 'Streaming Settings', sub: 'Screen capture, FPS cap and quality preferences' }
+  };
+  if (titles[tabId]) {
+    $('page-title').textContent = titles[tabId].title;
+    $('page-subtitle').textContent = titles[tabId].sub;
+  }
+}
+
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function copyText(id){
+  const txt = $(id).textContent;
+  navigator.clipboard.writeText(txt);
+  toast('Copied ' + txt + ' to clipboard!');
+}
 
 async function api(path, opts){
   const r = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
-  if(!r.ok){ let d=''; try{ d=(await r.json()).detail; }catch(e){} throw new Error(d||('HTTP '+r.status)); }
+  if(!r.ok){
+    let d = '';
+    try { d = (await r.json()).detail; } catch(e){}
+    throw new Error(d || ('HTTP ' + r.status));
+  }
   return r.json();
 }
 
-function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
 async function pairingStart(ttl){
-  try{
-    await api('/api/admin/pairing/start',{method:'POST',body:JSON.stringify(ttl?{ttl}: {})});
+  try {
+    await api('/api/admin/pairing/start', {method:'POST', body:JSON.stringify(ttl ? {ttl} : {})});
     await refresh();
     toast('New pairing code generated');
-  }catch(e){ toast('Failed: '+e.message); }
+  } catch(e) {
+    toast('Failed: ' + e.message);
+  }
 }
 
 async function refresh(){
   let s;
-  try { s = await api('/api/admin/status'); } catch(e){ $('banner').className='banner red'; $('banner').textContent='Cannot reach the local server: '+e.message; return; }
-  $('banner').textContent=''; $('banner').className='';
+  try {
+    s = await api('/api/admin/status');
+  } catch(e) {
+    $('banner').className = 'banner red';
+    $('banner').textContent = 'Cannot reach local server: ' + e.message;
+    return;
+  }
+
+  $('banner').textContent = '';
+  $('banner').className = '';
   $('devname').textContent = s.laptop_name;
   $('ip').textContent = s.local_ip;
   $('port').textContent = s.port;
-  $('res').textContent = s.resolution.width + ' x ' + s.resolution.height;
-  const sh = $('sharing');
-  sh.textContent = s.sharing ? 'ACTIVE' : 'OFF';
-  sh.className = 'pill ' + (s.sharing ? 'on' : 'off');
-  $('toggle-sharing').textContent = s.sharing ? 'Stop screen sharing' : 'Start screen sharing';
+  $('res').textContent = s.resolution.width + ' × ' + s.resolution.height;
 
-  // banner about capture errors
-  if(s.sharing && s.capture_error){
-    $('banner').className='banner yellow';
-    $('banner').textContent='Screen capture problem: '+s.capture_error;
+  const headerStatusText = $('header-status-text');
+  const toggleBtn = $('toggle-sharing');
+
+  if (s.sharing) {
+    headerStatusText.textContent = 'Screen Sharing Active';
+    toggleBtn.textContent = '⏹ Stop Screen Sharing';
+    toggleBtn.className = 'btn btn-pink';
+  } else {
+    headerStatusText.textContent = 'Sharing Disabled';
+    toggleBtn.textContent = '▶ Start Screen Sharing';
+    toggleBtn.className = 'btn btn-blue';
   }
 
-  // pairing
+  if(s.sharing && s.capture_error){
+    $('banner').className = 'banner yellow';
+    $('banner').textContent = 'Capture notice: ' + s.capture_error;
+  }
+
   const p = s.pairing;
   if(p.active){
     $('code').textContent = p.code;
     countdown = p.expires_in;
     const mobileUrl = 'http://' + s.local_ip + ':' + s.port + '/pair?code=' + p.code;
-    $('qrbox').innerHTML = '<img class="qr" alt="Pairing QR" src="/api/admin/qr?u=' + encodeURIComponent(mobileUrl) + '">';
-    $('exp').textContent = 'Pairing code expires in ' + p.expires_in + 's';
+    $('qrbox').innerHTML = '<img class="qr-image" style="background:#ffffff; padding:12px; border-radius:14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" width="200" height="200" alt="Pairing QR" src="/api/admin/qr?u=' + encodeURIComponent(mobileUrl) + '">';
+    $('graphic-box').style.display = 'none';
+    $('pairing-title').textContent = 'Scan QR or Enter Code';
+    $('exp').textContent = 'Expires in ' + p.expires_in + 's';
   } else {
     $('code').textContent = '------';
     $('qrbox').innerHTML = '';
-    $('exp').textContent = 'No active pairing code';
+    $('graphic-box').style.display = 'flex';
+    $('pairing-title').textContent = 'No active code';
+    $('exp').textContent = 'Share this code to connect a new device';
   }
 
-  // connected clients
+  // Connected devices list (in Devices tab)
   const con = s.connected || [];
-  $('connected').innerHTML = con.length
-    ? con.map(c => '<div class="device"><div><b>' + esc(c.device_name) + '</b><div class="meta">connected ' +
-        new Date(c.connected_at*1000).toLocaleTimeString() + (c.paused?' · paused':'') + '</div></div>' +
-        '<button class="stop" onclick="kick(\'' + esc(c.device_name) + '\')">Disconnect</button></div>').join('')
-    : '<div class="muted">None</div>';
+  if (con.length > 0) {
+    $('connected-list').innerHTML = '<div class="device-list">' + con.map(c => 
+      '<div class="device-row"><div class="device-info"><div class="device-icon">📱</div>' +
+      '<div class="device-details"><h4>' + esc(c.device_name) + '</h4><p>Connected ' + new Date(c.connected_at*1000).toLocaleTimeString() + (c.paused?' · Paused':'') + '</p></div></div>' +
+      '<button class="btn btn-outline" style="padding:6px 12px; font-size:12px;" onclick="kick(\'' + esc(c.device_name) + '\')">Disconnect</button></div>'
+    ).join('') + '</div>';
+  } else {
+    $('connected-list').innerHTML = `
+      <div class="empty-state-box">
+        <div class="empty-icon">📱</div>
+        <div class="empty-text">
+          <h4>No active connections</h4>
+          <p>Your device is not connected to any other device right now.</p>
+        </div>
+      </div>`;
+  }
 
-  // paired sessions
+  // Paired sessions list (in Sessions tab)
   const sess = s.sessions || [];
-  $('sessions').innerHTML = sess.length
-    ? sess.map(v => '<div class="device"><div><b>' + esc(v.device_name) + '</b><div class="meta">paired ' +
-        new Date(v.created_at*1000).toLocaleString() + '</div></div>' +
-        '<button class="stop" onclick="revokeDevice(\'' + esc(v.device_id) + '\')">Remove</button></div>').join('')
-    : '<div class="muted">None</div>';
+  if (sess.length > 0) {
+    $('sessions-list').innerHTML = '<div class="device-list">' + sess.map(v => 
+      '<div class="device-row"><div class="device-info"><div class="device-icon">💻</div>' +
+      '<div class="device-details"><h4>' + esc(v.device_name) + '</h4><p>Paired ' + new Date(v.created_at*1000).toLocaleString() + '</p></div></div>' +
+      '<button class="btn btn-danger" style="padding:6px 12px; font-size:12px;" onclick="revokeDevice(\'' + esc(v.device_id) + '\')">Remove</button></div>'
+    ).join('') + '</div>';
+  } else {
+    $('sessions-list').innerHTML = `
+      <div class="empty-state-box">
+        <div class="empty-icon">💻</div>
+        <div class="empty-text">
+          <h4>No paired devices</h4>
+          <p>Pair your devices for faster and easier access.</p>
+        </div>
+      </div>`;
+  }
 }
 
 async function kick(name){
@@ -181,20 +1230,20 @@ async function kick(name){
 
 async function revokeDevice(id){
   await api('/api/admin/revoke/' + id, {method:'POST'});
-  toast('Device removed');
+  toast('Device access revoked');
   refresh();
 }
 
 $('newcode').onclick = () => pairingStart();
 $('toggle-sharing').onclick = async () => {
-  const on = $('toggle-sharing').textContent.startsWith('Start');
+  const on = $('toggle-sharing').textContent.includes('Start');
   await api('/api/admin/sharing', {method:'POST', body:JSON.stringify({enabled:on})});
-  toast(on ? 'Screen sharing started' : 'Screen sharing stopped');
+  toast(on ? 'Screen sharing active' : 'Screen sharing stopped');
   refresh();
 };
 $('revoke-all').onclick = async () => {
   await api('/api/admin/revoke-all', {method:'POST'});
-  toast('All devices disconnected and revoked');
+  toast('All devices disconnected');
   refresh();
 };
 $('open-mobile').onclick = () => window.open(location.origin + '/', '_blank');
@@ -206,19 +1255,28 @@ $('save-settings').onclick = async () => {
     monitor: parseInt($('monitor').value)||0,
   };
   await api('/api/admin/settings', {method:'POST', body:JSON.stringify(body)});
-  toast('Settings saved');
+  toast('Settings updated');
   refresh();
 };
 
 async function loadSettings(){
   const s = await api('/api/admin/settings');
-  $('fps').value = s.fps; $('quality').value = s.quality;
-  $('scale').value = Math.round(s.scale*100); $('monitor').value = s.monitor;
+  $('fps').value = s.fps;
+  $('quality').value = s.quality;
+  $('scale').value = Math.round(s.scale*100);
+  $('monitor').value = s.monitor;
 }
 
-setInterval(()=>{ if(countdown>0){ countdown--; $('exp').textContent='Pairing code expires in '+countdown+'s'; } }, 1000);
-refresh(); loadSettings();
-pollTimer = setInterval(refresh, 5000);
+setInterval(() => {
+  if(countdown > 0){
+    countdown--;
+    $('exp').textContent = 'Expires in ' + countdown + 's';
+  }
+}, 1000);
+
+refresh();
+loadSettings();
+setInterval(refresh, 5000);
 </script>
 </body>
 </html>

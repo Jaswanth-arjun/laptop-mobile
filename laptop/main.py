@@ -1,12 +1,15 @@
 """RemoteView laptop application entry point.
 
 Usage:
-    python main.py                 # start server + dashboard + overlay
+    python main.py                 # local mode (same Wi-Fi)
+    python main.py --relay         # cloud relay mode (any network)
     python main.py --setup-firewall
     python main.py --no-overlay
 """
 import argparse
+import asyncio
 import logging
+import os
 import socket
 import sys
 import threading
@@ -39,9 +42,11 @@ def main() -> int:
     parser.add_argument("--setup-firewall", action="store_true", help="Add Windows Firewall rule (requires admin)")
     parser.add_argument("--no-overlay", action="store_true", help="Disable the on-screen sharing indicator")
     parser.add_argument("--port", type=int, default=config.PORT)
+    parser.add_argument("--relay", action="store_true", help="Connect to cloud relay (works across any network)")
+    parser.add_argument("--relay-url", type=str, default=None, help="Custom relay server URL (default: from .env or localhost)")
     args = parser.parse_args()
 
-    # load .env from the laptop directory if present (never overrides real env vars)
+    # load .env from the laptop directory if present
     try:
         from dotenv import load_dotenv
 
@@ -49,9 +54,7 @@ def main() -> int:
     except ImportError:
         pass
 
-    # re-read config values that may come from .env
     import importlib
-
     importlib.reload(config)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s")
@@ -82,6 +85,7 @@ def main() -> int:
 
     url = f"http://{server.local_ip}:{port}"
     admin_url = f"http://127.0.0.1:{port}/admin"
+    relay_url = args.relay_url or os.environ.get("RELAY_URL", "ws://localhost:4000")
 
     print("", flush=True)
     print("=" * 62, flush=True)
@@ -98,32 +102,61 @@ def main() -> int:
         for line in firewall_msg.splitlines():
             print(f"    {line}", flush=True)
     print("=" * 62, flush=True)
-    print("  Keep this window open. Press Ctrl+C to stop.", flush=True)
-    print("", flush=True)
 
-    server.loop = None  # set once the event loop is running (see lifespan)
-
+    server.loop = None
     app = server.app
+
+    relay_client = None
+    if args.relay:
+        from app.relay_client import RelayClient
+        relay_client = RelayClient(
+            relay_url=relay_url,
+            capture=server.capture,
+            key_pool=server.key_pool,
+            laptop_name=get_device_name(),
+        )
 
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
     async def lifespan(app):
-        import asyncio
-
         server.loop = asyncio.get_running_loop()
         server.capture.start()
+
+        relay_task = None
+        if relay_client:
+            try:
+                code = await relay_client.connect()
+                print("", flush=True)
+                print("  " + "★" * 58, flush=True)
+                print("  ★ CLOUD RELAY ACTIVE — WORKS ACROSS ANY NETWORK!", flush=True)
+                print(f"  ★ ROOM CODE: {code}", flush=True)
+                print(f"  ★ Relay URL: {relay_url}", flush=True)
+                print("  " + "★" * 58, flush=True)
+                print("", flush=True)
+                relay_task = asyncio.create_task(relay_client.run())
+            except Exception as e:
+                log.error("Failed to connect to relay: %s", e)
+
         yield
+
+        if relay_client:
+            await relay_client.close()
+        if relay_task:
+            relay_task.cancel()
         server.capture.stop()
 
     app.router.lifespan_context = lifespan
-
     config.PORT = port
 
     # open dashboard in the default browser
     threading.Timer(1.0, lambda: webbrowser.open(admin_url)).start()
 
+    print("  Keep this window open. Press Ctrl+C to stop.", flush=True)
+    print("", flush=True)
+
     uvicorn.run(app, host=config.HOST, port=port, log_level="warning", ws_ping_interval=20, ws_ping_timeout=20)
+    return 0
 
 
 if __name__ == "__main__":

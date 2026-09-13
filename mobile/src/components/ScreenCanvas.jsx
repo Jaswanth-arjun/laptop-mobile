@@ -4,11 +4,14 @@
 import { useEffect, useRef } from "react";
 import { stream } from "../services/stream.js";
 
-export default function ScreenCanvas({ active, scale = 1, offset = { x: 0, y: 0 }, canvasRef, onResolution }) {
+export default function ScreenCanvas({ active, scale = 1, offset = { x: 0, y: 0 }, canvasRef, onResolution, streamSource }) {
   const localRef = useRef(null);
   const ref = canvasRef || localRef;
   const resCb = useRef(onResolution);
   resCb.current = onResolution;
+
+  // Use provided streamSource or default to local stream
+  const source = streamSource || stream;
 
   useEffect(() => {
     if (!active) return undefined;
@@ -44,8 +47,8 @@ export default function ScreenCanvas({ active, scale = 1, offset = { x: 0, y: 0 
       ctx.drawImage(bitmap, 0, 0);
       if (bitmap.close) bitmap.close();
     };
-    return stream.onFrame(draw);
-  }, [active, ref]);
+    return source.onFrame(draw);
+  }, [active, ref, source]);
 
   return (
     <div

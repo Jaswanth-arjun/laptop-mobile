@@ -1,15 +1,24 @@
-"""Screen capture + JPEG frame encoding using MSS and Pillow.
+"""Screen capture + JPEG frame encoding using DXCam (with MSS fallback) and Pillow.
 
-A single background thread captures frames into a shared slot; WebSocket
-handlers just read the latest frame and encode it at the quality/scale the
-client requested. This keeps CPU usage low even with multiple viewers.
+DXCam uses DXGI Desktop Duplication API on Windows, eliminating mouse cursor flickering
+and offering ultra-low CPU GPU-accelerated capture.
 """
 import io
+import logging
 import threading
 import time
 
-import mss
 from PIL import Image
+
+log = logging.getLogger("remoteview.capture")
+
+try:
+    import dxcam
+    HAS_DXCAM = True
+except Exception:
+    HAS_DXCAM = False
+
+import mss
 
 
 class CaptureError(Exception):
@@ -27,6 +36,7 @@ class ScreenCapture:
         self._thread: threading.Thread | None = None
         self._running = False
         self._event = threading.Event()
+        self._camera = None
 
     # ------------------------------------------------------------ lifecycle
     def start(self) -> None:
@@ -42,6 +52,12 @@ class ScreenCapture:
         if self._thread is not None:
             self._thread.join(timeout=5)
             self._thread = None
+        if self._camera is not None:
+            try:
+                self._camera.stop()
+            except Exception:
+                pass
+            self._camera = None
 
     @property
     def running(self) -> bool:
@@ -53,13 +69,49 @@ class ScreenCapture:
     # ------------------------------------------------------------ internals
     def _loop(self) -> None:
         sct = None
+        use_dxcam = HAS_DXCAM
+
+        if use_dxcam:
+            try:
+                self._camera = dxcam.create(output_idx=self._monitor_index, output_color="RGB")
+                log.info("DXCam initialized (No mouse flickering, DXGI GPU capture)")
+            except Exception as e:
+                log.warning("Failed to initialize DXCam: %s. Falling back to MSS.", e)
+                use_dxcam = False
+                self._camera = None
+
         while self._running:
             started = time.time()
             try:
-                if sct is None:
-                    sct = mss.mss()
-                self._capture_once(sct)
+                img = None
+                if use_dxcam and self._camera is not None:
+                    frame = self._camera.grab()
+                    if frame is not None:
+                        img = Image.fromarray(frame)
+                
+                if img is None:
+                    if sct is None:
+                        sct = mss.mss()
+                    monitors = sct.monitors
+                    idx = self._monitor_index if 0 <= self._monitor_index < len(monitors) else 1
+                    monitor = monitors[idx]
+                    if monitor["width"] <= 0 or monitor["height"] <= 0:
+                        raise CaptureError("No usable monitor found")
+                    raw = sct.grab(monitor)
+                    img = Image.frombytes("RGB", raw.size, raw.rgb)
+
+                # tiny thumbnail used by clients for cheap change detection
+                thumb_w = 64
+                thumb = img.resize((thumb_w, max(1, int(thumb_w * img.height / img.width))))
+                buf = io.BytesIO()
+                thumb.save(buf, format="JPEG", quality=40)
+
+                with self._lock:
+                    self._img = img
+                    self._thumb = buf.getvalue()
+                    self._ts = time.time()
                 self._error = None
+
             except Exception as exc:  # capture failures must never kill the thread
                 self._error = str(exc) or exc.__class__.__name__
                 if sct is not None:
@@ -68,9 +120,9 @@ class ScreenCapture:
                     except Exception:
                         pass
                     sct = None
+
             elapsed = time.time() - started
-            # run at ~2x the default fps so slower clients still get fresh frames
-            delay = max(0.01, 0.5 / max(1, 12) - elapsed)
+            delay = max(0.01, 0.033 - elapsed)
             self._event.wait(delay)
             self._event.clear()
 
@@ -80,34 +132,9 @@ class ScreenCapture:
             except Exception:
                 pass
 
-    def _capture_once(self, sct: mss.mss) -> None:
-        monitors = sct.monitors
-        idx = self._monitor_index if 0 <= self._monitor_index < len(monitors) else 1
-        monitor = monitors[idx]
-        if monitor["width"] <= 0 or monitor["height"] <= 0:
-            raise CaptureError("No usable monitor found")
-        raw = sct.grab(monitor)
-
-        img = Image.frombytes("RGB", raw.size, raw.rgb)
-
-        # tiny thumbnail used by clients for cheap change detection
-        thumb_w = 64
-        thumb = img.resize((thumb_w, max(1, int(thumb_w * img.height / img.width))))
-        buf = io.BytesIO()
-        thumb.save(buf, format="JPEG", quality=40)
-
-        with self._lock:
-            self._img = img
-            self._thumb = buf.getvalue()
-            self._ts = time.time()
-
     # ------------------------------------------------------------ public API
     def get_frame(self, quality: int, scale: float) -> tuple[bytes | None, bytes | None, float]:
-        """Return (encoded_jpeg, thumb, timestamp).
-
-        Encoding happens outside the lock on a private reference, so the
-        capture thread keeps running while we encode.
-        """
+        """Return (encoded_jpeg, thumb, timestamp)."""
         with self._lock:
             img = self._img
             thumb = self._thumb
@@ -150,11 +177,16 @@ class ScreenCapture:
             img = self._img
             ts = self._ts
         if img is None or time.time() - ts > 2.0:
-            with mss.mss() as sct:
-                monitors = sct.monitors
-                idx = self._monitor_index if 0 <= self._monitor_index < len(monitors) else 1
-                raw = sct.grab(monitors[idx])
-            img = Image.frombytes("RGB", raw.size, raw.rgb)
+            if HAS_DXCAM and self._camera is not None:
+                frame = self._camera.grab()
+                if frame is not None:
+                    img = Image.fromarray(frame)
+            if img is None:
+                with mss.mss() as sct:
+                    monitors = sct.monitors
+                    idx = self._monitor_index if 0 <= self._monitor_index < len(monitors) else 1
+                    raw = sct.grab(monitors[idx])
+                img = Image.frombytes("RGB", raw.size, raw.rgb)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=quality)
         return buf.getvalue()

@@ -106,6 +106,16 @@ export default function Home({ autoPair = false }) {
         </div>
       </div>
 
+      <div className="card">
+        <h2>Different network?</h2>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Not on the same Wi-Fi? Use <b>Cloud Relay</b> to connect from anywhere.
+        </div>
+        <button className="btn secondary" onClick={() => navigate("/relay")}>
+          Connect via Cloud Relay
+        </button>
+      </div>
+
       <ToastHost toasts={toasts} />
     </div>
   );

@@ -1,12 +1,13 @@
 // AI agent chat for the live screen.
 //  [+] captures the current laptop screen into the chat (tap again for more)
 //  [rocket/send] sends all captured screens + your question to the AI
-//  (via the laptop backend -> OpenRouter; the API key stays on the laptop)
+//  Works in both local mode (same Wi-Fi) and relay mode (any network).
 
 import { useEffect, useRef, useState } from "react";
-import { aiChat } from "../services/api.js";
+import { aiChat, takeScreenshot } from "../services/api.js";
 import { chatStore } from "../services/chatStore.js";
 import { stream } from "../services/stream.js";
+import { relayAiChat, relayTakeScreenshot } from "../services/relay.js";
 import { compressScreenshot } from "../utils/image.js";
 
 function formatMessageText(text) {
@@ -29,7 +30,7 @@ function formatMessageText(text) {
   });
 }
 
-export default function AiChat({ onOpenChange }) {
+export default function AiChat({ onOpenChange, relayMode = false }) {
   const [messages, setMessages] = useState(chatStore.get());
   const [pending, setPending] = useState([]); // {id, dataUrl, thumbUrl}
   const [input, setInput] = useState("");
@@ -51,11 +52,19 @@ export default function AiChat({ onOpenChange }) {
   const capture = async () => {
     setCapturing(true);
     try {
-      const frameBlob = stream.getLatestFrameBlob();
-      if (!frameBlob) {
-        throw new Error("No live screen frame available yet on mobile. Wait a moment for stream.");
+      let blob;
+      if (relayMode) {
+        // In relay mode, request screenshot from laptop via relay
+        const shot = await relayTakeScreenshot();
+        blob = shot.blob;
+      } else {
+        // In local mode, use the latest streamed frame
+        blob = stream.getLatestFrameBlob();
+        if (!blob) {
+          throw new Error("No live screen frame available yet. Wait a moment for stream.");
+        }
       }
-      const { dataUrl, thumbUrl } = await compressScreenshot(frameBlob);
+      const { dataUrl, thumbUrl } = await compressScreenshot(blob);
       const item = { id: "c_" + Date.now() + "_" + ++idRef.current, dataUrl, thumbUrl };
       setPending((p) => [...p, item]);
       setOpen(true);
@@ -90,7 +99,8 @@ export default function AiChat({ onOpenChange }) {
     setBusy(true);
     chatStore.add({ id: "a_" + Date.now(), role: "assistant", text: "", pending: true });
     try {
-      const text = await aiChat(prompt, images, history);
+      const chatFn = relayMode ? relayAiChat : aiChat;
+      const text = await chatFn(prompt, images, history);
       chatStore.updateLast({ text: text || "(empty answer)", pending: false });
     } catch (e) {
       chatStore.updateLast({ text: e.message, pending: false, error: true });
