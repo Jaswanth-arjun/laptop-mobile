@@ -1212,7 +1212,7 @@ async function refresh(){
   if(p.active){
     $('code').textContent = p.code;
     countdown = p.expires_in;
-    const mobileUrl = 'http://' + s.local_ip + ':' + s.port + '/pair?code=' + p.code;
+    const mobileUrl = 'http://' + s.local_ip + ':' + s.port + '/?code=' + p.code;
     $('qrbox').innerHTML = '<img class="qr-image" style="background:#ffffff; padding:12px; border-radius:14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" width="200" height="200" alt="Pairing QR" src="/api/admin/qr?u=' + encodeURIComponent(mobileUrl) + '">';
     $('graphic-box').style.display = 'none';
     $('pairing-title').textContent = 'Scan QR or Enter Code';

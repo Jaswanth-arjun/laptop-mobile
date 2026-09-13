@@ -4,10 +4,11 @@ import json
 import logging
 import os
 import time
+import sys
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import config
@@ -20,7 +21,21 @@ from screenshots.service import take_screenshot
 
 log = logging.getLogger("remoteview")
 
-MOBILE_DIST = Path(os.environ.get("RV_MOBILE_DIST", str(config.PROJECT_DIR.parent / "mobile" / "dist")))
+
+def _get_mobile_dist_path() -> Path:
+    if "RV_MOBILE_DIST" in os.environ:
+        return Path(os.environ["RV_MOBILE_DIST"])
+    if hasattr(sys, "_MEIPASS"):
+        bundled = Path(sys._MEIPASS) / "mobile_dist"
+        if bundled.exists():
+            return bundled
+    ws_dist = config.PROJECT_DIR.parent / "mobile" / "dist"
+    if ws_dist.exists():
+        return ws_dist
+    return config.APP_DIR / "static" / "mobile"
+
+
+MOBILE_DIST = _get_mobile_dist_path()
 ADMIN_PAGE = config.APP_DIR / "static" / "admin.html"
 
 STATIC_FILENAMES = {"manifest.webmanifest", "favicon.ico", "icon-192.png", "icon-512.png", "sw.js"}
@@ -145,6 +160,10 @@ class RemoteViewServer:
         rt = self
 
         # -------------------------------------------------- public (pairing)
+        @app.get("/pair", include_in_schema=False)
+        async def pair_redirect(code: str = ""):
+            return RedirectResponse(url=f"/?code={code}")
+
         @app.post("/api/pair")
         async def pair(body: dict):
             try:
