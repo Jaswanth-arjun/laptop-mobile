@@ -292,8 +292,6 @@ missing module named 'python_socks.async_' - imported by websockets.asyncio.clie
 missing module named IPython - imported by dotenv.ipython (top-level)
 missing module named ImageDraw - imported by qrcode.compat.pil (optional)
 missing module named Image - imported by qrcode.compat.pil (optional)
-missing module named 'comtypes.gen' - imported by comtypes.client._generate (delayed, conditional)
-missing module named comtypes.gen - imported by comtypes (delayed), comtypes.client._code_cache (delayed, optional), comtypes.client (top-level)
 missing module named ujson - imported by fastapi.responses (optional)
 missing module named wmi - imported by dns.win32util (conditional)
 missing module named 'aioquic.quic' - imported by dns.quic._asyncio (top-level), dns.quic._common (top-level), dns.quic._sync (top-level), dns.quic._trio (top-level)

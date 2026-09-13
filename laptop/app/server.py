@@ -37,30 +37,36 @@ class RemoteViewServer:
         self.local_ip = "127.0.0.1"
         self.port = config.PORT
         # Gemini multi-key pool (PRO key first, then normal keys)
+    def get_key_pool(self):
+        """Return dynamic key pool with user custom DB keys if present, else config default keys."""
+        from .key_pool import GeminiKeyPool
+        k1 = str(db.get_setting("gemini_key_1", "") or "").strip()
+        k2 = str(db.get_setting("gemini_key_2", "") or "").strip()
+        k3 = str(db.get_setting("gemini_key_3", "") or "").strip()
+        custom_keys = [k for k in [k1, k2, k3] if k]
+        if custom_keys:
+            return GeminiKeyPool(custom_keys, cooldown=config.GEMINI_COOLDOWN)
         if config.GEMINI_API_KEYS:
-            from .key_pool import GeminiKeyPool
-            self.key_pool = GeminiKeyPool(config.GEMINI_API_KEYS, cooldown=config.GEMINI_COOLDOWN)
-            log.info("Gemini AI enabled with %d API key(s)", self.key_pool.size)
-        else:
-            self.key_pool = None
-            log.info("Gemini AI disabled (no API keys configured)")
-        self.app = self._build_app()
+            return GeminiKeyPool(config.GEMINI_API_KEYS, cooldown=config.GEMINI_COOLDOWN)
+        return None
 
     async def _gemini_call(self, payload: dict) -> str:
         """Call Gemini API with automatic key rotation and retry on rate-limit."""
         import httpx
 
-        if self.key_pool is None:
-            raise HTTPException(status_code=503, detail="AI not configured. Add GEMINI_API_KEY_1 to laptop/.env")
+        pool = self.get_key_pool()
+        if pool is None:
+            raise HTTPException(
+                status_code=503,
+                detail="AI is not configured. Go to Dashboard > Settings to enter your Gemini API Key.",
+            )
 
         last_error = "No AI keys available"
-        # Try up to key_pool.size + 1 times (rotate through all keys + one wait-retry)
-        for attempt in range(self.key_pool.size + 1):
-            if attempt < self.key_pool.size:
-                key = await self.key_pool.next_key()
+        for attempt in range(pool.size + 1):
+            if attempt < pool.size:
+                key = await pool.next_key()
             else:
-                # Last attempt: wait for cooldown
-                key = await self.key_pool.next_key_wait(timeout=65)
+                key = await pool.next_key_wait(timeout=65)
             if key is None:
                 last_error = "All AI keys are rate-limited. Please wait a moment and try again."
                 continue
@@ -74,7 +80,7 @@ class RemoteViewServer:
                 continue
 
             if resp.status_code == 429:
-                self.key_pool.report_rate_limit(key)
+                pool.report_rate_limit(key)
                 last_error = "Key rate-limited, rotating..."
                 log.info("Gemini 429 on attempt %d, rotating to next key", attempt + 1)
                 continue
@@ -84,16 +90,15 @@ class RemoteViewServer:
                 for e in data.get("error", {}).get("details", []):
                     err_msg += str(e.get("reason", ""))
                 if "API_KEY_INVALID" in err_msg or "API key" in str(data.get("error", {}).get("message", "")):
-                    raise HTTPException(status_code=502, detail="Invalid Gemini API key. Check your keys in laptop/.env")
+                    raise HTTPException(status_code=502, detail="Invalid Gemini API key. Please check your keys in Settings.")
                 last_error = data.get("error", {}).get("message", f"Gemini error ({resp.status_code})")
                 continue
             if resp.status_code >= 400:
                 last_error = f"Gemini API error ({resp.status_code})"
                 continue
 
-            self.key_pool.report_success(key)
+            pool.report_success(key)
             data = resp.json()
-            # Extract text from Gemini response format
             candidates = data.get("candidates", [])
             if not candidates:
                 last_error = "Gemini returned no candidates. Try again."
@@ -106,6 +111,7 @@ class RemoteViewServer:
             return text
 
         raise HTTPException(status_code=502, detail=last_error)
+
 
 
     # ================================================================ auth
@@ -371,12 +377,24 @@ class RemoteViewServer:
         @app.get("/api/admin/settings")
         async def admin_settings(request: Request):
             rt._require_local(request)
+            k1 = str(db.get_setting("gemini_key_1", "") or "")
+            k2 = str(db.get_setting("gemini_key_2", "") or "")
+            k3 = str(db.get_setting("gemini_key_3", "") or "")
+            def mask(k):
+                return (k[:6] + "..." + k[-4:]) if len(k) > 10 else ("********" if k else "")
             return {
                 "ok": True,
                 "fps": db.get_setting("fps", config.DEFAULT_FPS),
                 "quality": db.get_setting("quality", config.DEFAULT_QUALITY),
                 "scale": db.get_setting("scale", config.DEFAULT_SCALE),
                 "monitor": db.get_setting("monitor", 0),
+                "gemini_key_1": k1,
+                "gemini_key_2": k2,
+                "gemini_key_3": k3,
+                "gemini_key_1_masked": mask(k1),
+                "gemini_key_2_masked": mask(k2),
+                "gemini_key_3_masked": mask(k3),
+                "has_custom_keys": bool(k1 or k2 or k3),
             }
 
         @app.post("/api/admin/settings")
@@ -399,7 +417,14 @@ class RemoteViewServer:
                 monitor = max(0, int(body["monitor"]))
                 rt.capture.set_monitor(monitor)
                 db.set_setting("monitor", monitor)
+            if "gemini_key_1" in body:
+                db.set_setting("gemini_key_1", str(body["gemini_key_1"]).strip())
+            if "gemini_key_2" in body:
+                db.set_setting("gemini_key_2", str(body["gemini_key_2"]).strip())
+            if "gemini_key_3" in body:
+                db.set_setting("gemini_key_3", str(body["gemini_key_3"]).strip())
             return {"ok": True, "fps": fps, "quality": quality, "scale": scale, "monitor": monitor}
+
 
         @app.post("/api/admin/revoke/{device_id}")
         async def admin_revoke(device_id: str, request: Request):

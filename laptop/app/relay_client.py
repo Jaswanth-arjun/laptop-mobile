@@ -161,9 +161,23 @@ class RelayClient:
     async def _call_gemini(self, prompt: str, images: list, history: list) -> str:
         """Call Gemini API with key rotation (same logic as server.py)."""
         from app import config
+        from security import db
+        from app.key_pool import GeminiKeyPool
 
-        if not self.key_pool:
-            raise RuntimeError("AI not configured. Add GEMINI_API_KEY_1 to .env")
+        k1 = str(db.get_setting("gemini_key_1", "") or "").strip()
+        k2 = str(db.get_setting("gemini_key_2", "") or "").strip()
+        k3 = str(db.get_setting("gemini_key_3", "") or "").strip()
+        custom_keys = [k for k in [k1, k2, k3] if k]
+
+        if custom_keys:
+            pool = GeminiKeyPool(custom_keys, cooldown=config.GEMINI_COOLDOWN)
+        elif self.key_pool:
+            pool = self.key_pool
+        elif config.GEMINI_API_KEYS:
+            pool = GeminiKeyPool(config.GEMINI_API_KEYS, cooldown=config.GEMINI_COOLDOWN)
+        else:
+            raise RuntimeError("AI not configured. Go to Dashboard > Settings to enter your Gemini API Key.")
+
 
         import base64 as b64mod
 
@@ -228,11 +242,11 @@ class RelayClient:
         import httpx
 
         last_error = "No AI keys available"
-        for attempt in range(self.key_pool.size + 1):
-            if attempt < self.key_pool.size:
-                key = await self.key_pool.next_key()
+        for attempt in range(pool.size + 1):
+            if attempt < pool.size:
+                key = await pool.next_key()
             else:
-                key = await self.key_pool.next_key_wait(timeout=65)
+                key = await pool.next_key_wait(timeout=65)
             if key is None:
                 last_error = "All AI keys are rate-limited. Wait a moment."
                 continue
@@ -246,13 +260,13 @@ class RelayClient:
                 continue
 
             if resp.status_code == 429:
-                self.key_pool.report_rate_limit(key)
+                pool.report_rate_limit(key)
                 continue
             if resp.status_code >= 400:
                 last_error = f"Gemini error ({resp.status_code})"
                 continue
 
-            self.key_pool.report_success(key)
+            pool.report_success(key)
             data = resp.json()
             candidates = data.get("candidates", [])
             if not candidates:

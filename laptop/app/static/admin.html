@@ -1015,6 +1015,50 @@
 
       <!-- TAB 4: SETTINGS VIEW -->
       <div id="view-settings" class="tab-view">
+        <!-- Instruction Banner for AI API Keys -->
+        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-lg); padding: 18px 22px; display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px;">
+          <div style="font-size: 24px; line-height: 1;">💡</div>
+          <div>
+            <h4 style="font-size: 15px; font-weight: 700; color: #a5b4fc; margin-bottom: 4px;">User API Key Configuration &amp; Rate-Limit Protection</h4>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+              To prevent hitting shared API rate limits when asking questions, you can enter your own free <strong>Gemini API Key(s)</strong> below. 
+              Get your free key instantly from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #60a5fa; text-decoration: underline; font-weight: 600;">Google AI Studio</a> (Free, 10 seconds). Your keys are stored locally on your laptop and never shared.
+            </p>
+          </div>
+        </div>
+
+        <!-- Custom Gemini API Keys Card -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header" style="margin-bottom:16px;">
+            <div class="card-header-title">
+              <div class="card-icon purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+              </div>
+              <div class="card-header-text">
+                <h3>Gemini AI API Keys</h3>
+                <p>Personal API keys for unlimited AI responses</p>
+              </div>
+            </div>
+            <span id="ai-key-status" class="status-pill" style="padding:4px 12px; font-size:11px; background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border-color: rgba(99, 102, 241, 0.3);">Default Keys Active</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+            <div class="setting-input-box">
+              <label for="gemini-key-1"><span>Gemini API Key 1 (Primary)</span><span style="color:#60a5fa;">Free Key</span></label>
+              <input type="password" id="gemini-key-1" placeholder="AIzaSy... (Paste key from Google AI Studio)">
+            </div>
+            <div class="setting-input-box">
+              <label for="gemini-key-2"><span>Gemini API Key 2 (Backup / Optional)</span><span>Backup</span></label>
+              <input type="password" id="gemini-key-2" placeholder="AIzaSy... (Optional second key for rotation)">
+            </div>
+            <div class="setting-input-box">
+              <label for="gemini-key-3"><span>Gemini API Key 3 (Backup / Optional)</span><span>Backup</span></label>
+              <input type="password" id="gemini-key-3" placeholder="AIzaSy... (Optional third key)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Stream & Capture Settings Card -->
         <div class="card">
           <div class="card-header" style="margin-bottom:20px;">
             <div class="card-header-title">
@@ -1048,10 +1092,11 @@
           </div>
 
           <div>
-            <button class="btn btn-blue" id="save-settings">💾 Save Settings</button>
+            <button class="btn btn-blue" id="save-settings">💾 Save All Settings</button>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -1253,10 +1298,14 @@ $('save-settings').onclick = async () => {
     quality: parseInt($('quality').value)||60,
     scale: (parseInt($('scale').value)||100)/100,
     monitor: parseInt($('monitor').value)||0,
+    gemini_key_1: $('gemini-key-1').value,
+    gemini_key_2: $('gemini-key-2').value,
+    gemini_key_3: $('gemini-key-3').value,
   };
   await api('/api/admin/settings', {method:'POST', body:JSON.stringify(body)});
-  toast('Settings updated');
+  toast('Settings and API Keys updated');
   refresh();
+  loadSettings();
 };
 
 async function loadSettings(){
@@ -1265,7 +1314,24 @@ async function loadSettings(){
   $('quality').value = s.quality;
   $('scale').value = Math.round(s.scale*100);
   $('monitor').value = s.monitor;
+  if ($('gemini-key-1')) $('gemini-key-1').value = s.gemini_key_1 || '';
+  if ($('gemini-key-2')) $('gemini-key-2').value = s.gemini_key_2 || '';
+  if ($('gemini-key-3')) $('gemini-key-3').value = s.gemini_key_3 || '';
+  if ($('ai-key-status')) {
+    if (s.has_custom_keys) {
+      $('ai-key-status').textContent = 'Custom User Keys Active';
+      $('ai-key-status').style.background = 'rgba(16, 185, 129, 0.15)';
+      $('ai-key-status').style.color = '#34d399';
+      $('ai-key-status').style.borderColor = 'rgba(16, 185, 129, 0.3)';
+    } else {
+      $('ai-key-status').textContent = 'Default Keys Active';
+      $('ai-key-status').style.background = 'rgba(99, 102, 241, 0.15)';
+      $('ai-key-status').style.color = '#a5b4fc';
+      $('ai-key-status').style.borderColor = 'rgba(99, 102, 241, 0.3)';
+    }
+  }
 }
+
 
 setInterval(() => {
   if(countdown > 0){
