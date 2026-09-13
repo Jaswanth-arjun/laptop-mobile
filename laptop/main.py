@@ -31,7 +31,7 @@ from networking.firewall import ensure_rule
 from security import db
 
 
-def find_free_port(start: int, span: int) -> int:
+def find_free_port(start: int, span: int = 500) -> int:
     for port in range(start, start + span):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -40,7 +40,10 @@ def find_free_port(start: int, span: int) -> int:
                 return port
             except OSError:
                 continue
-    raise OSError(f"No free port found in range {start}-{start + span - 1}. Close the program using port {start} or set RV_PORT.")
+    # Fallback: let OS assign an available free port automatically
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((config.HOST, 0))
+        return s.getsockname()[1]
 
 
 def open_app_window(url: str):
@@ -102,7 +105,7 @@ def main() -> int:
     log = logging.getLogger("remoteview")
 
     db.init()
-    port = find_free_port(args.port, config.PORT_RANGE)
+    port = find_free_port(args.port, 500)
 
     firewall_msg = ensure_rule(port, auto=args.setup_firewall)
 
