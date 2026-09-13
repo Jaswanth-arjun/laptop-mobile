@@ -218,10 +218,11 @@ class RemoteViewServer:
 
         @app.post("/api/ai/describe")
         async def ai_describe(request: Request, token: str = Depends(rt._auth_token)):
-            if not config.GEMINI_API_KEYS:
+            pool = rt.get_key_pool()
+            if pool.size == 0:
                 raise HTTPException(
                     status_code=503,
-                    detail="AI is not configured. Set GEMINI_API_KEY_1 (and optionally _2, _3) in laptop/.env and restart.",
+                    detail="AI is not configured. Please enter your Gemini API Key in the Settings tab of the laptop dashboard.",
                 )
             try:
                 body = await request.json()
@@ -254,10 +255,11 @@ class RemoteViewServer:
             Images arrive as data:image/...;base64 URLs captured on the phone
             (compressed there). The Gemini API keys never leave the laptop.
             """
-            if not config.GEMINI_API_KEYS:
+            pool = rt.get_key_pool()
+            if pool.size == 0:
                 raise HTTPException(
                     status_code=503,
-                    detail="AI is not configured. Set GEMINI_API_KEY_1 (and optionally _2, _3) in laptop/.env and restart.",
+                    detail="AI is not configured. Please enter your Gemini API Key in the Settings tab of the laptop dashboard.",
                 )
             try:
                 body = await request.json()

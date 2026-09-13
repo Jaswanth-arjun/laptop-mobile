@@ -933,9 +933,10 @@
               </div>
             </div>
 
-            <div class="btn-group">
+            <div class="btn-group" style="display:flex; gap:10px; flex-wrap:wrap;">
               <button class="btn btn-pink" id="toggle-sharing">⏹ Stop Screen Sharing</button>
-              <button class="btn btn-outline" id="open-mobile">🌐 Open Web App</button>
+              <button class="btn btn-blue" id="open-vercel">🚀 Open Vercel App</button>
+              <button class="btn btn-outline" id="open-mobile">🏠 Open Local App</button>
             </div>
           </div>
 
@@ -1292,6 +1293,7 @@ $('revoke-all').onclick = async () => {
   refresh();
 };
 $('open-mobile').onclick = () => window.open(location.origin + '/', '_blank');
+$('open-vercel').onclick = () => window.open('https://laptop-mobile.vercel.app', '_blank');
 $('save-settings').onclick = async () => {
   const body = {
     fps: parseInt($('fps').value)||12,
