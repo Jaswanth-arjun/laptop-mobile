@@ -52,27 +52,41 @@ class ScreenCapture:
 
     # ------------------------------------------------------------ internals
     def _loop(self) -> None:
+        sct = None
         while self._running:
             started = time.time()
             try:
-                self._capture_once()
+                if sct is None:
+                    sct = mss.mss()
+                self._capture_once(sct)
                 self._error = None
             except Exception as exc:  # capture failures must never kill the thread
                 self._error = str(exc) or exc.__class__.__name__
+                if sct is not None:
+                    try:
+                        sct.close()
+                    except Exception:
+                        pass
+                    sct = None
             elapsed = time.time() - started
             # run at ~2x the default fps so slower clients still get fresh frames
             delay = max(0.01, 0.5 / max(1, 12) - elapsed)
             self._event.wait(delay)
             self._event.clear()
 
-    def _capture_once(self) -> None:
-        with mss.mss() as sct:
-            monitors = sct.monitors
-            idx = self._monitor_index if 0 <= self._monitor_index < len(monitors) else 1
-            monitor = monitors[idx]
-            if monitor["width"] <= 0 or monitor["height"] <= 0:
-                raise CaptureError("No usable monitor found")
-            raw = sct.grab(monitor)
+        if sct is not None:
+            try:
+                sct.close()
+            except Exception:
+                pass
+
+    def _capture_once(self, sct: mss.mss) -> None:
+        monitors = sct.monitors
+        idx = self._monitor_index if 0 <= self._monitor_index < len(monitors) else 1
+        monitor = monitors[idx]
+        if monitor["width"] <= 0 or monitor["height"] <= 0:
+            raise CaptureError("No usable monitor found")
+        raw = sct.grab(monitor)
 
         img = Image.frombytes("RGB", raw.size, raw.rgb)
 
