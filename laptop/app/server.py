@@ -73,7 +73,7 @@ class RemoteViewServer:
         import httpx
 
         pool = self.get_key_pool()
-        if pool is None:
+        if pool is None or pool.size == 0:
             raise HTTPException(
                 status_code=503,
                 detail="AI is not configured. Go to Dashboard > Settings to enter your Gemini API Key.",
@@ -219,7 +219,7 @@ class RemoteViewServer:
         @app.post("/api/ai/describe")
         async def ai_describe(request: Request, token: str = Depends(rt._auth_token)):
             pool = rt.get_key_pool()
-            if pool.size == 0:
+            if pool is None or pool.size == 0:
                 raise HTTPException(
                     status_code=503,
                     detail="AI is not configured. Please enter your Gemini API Key in the Settings tab of the laptop dashboard.",
@@ -256,7 +256,7 @@ class RemoteViewServer:
             (compressed there). The Gemini API keys never leave the laptop.
             """
             pool = rt.get_key_pool()
-            if pool.size == 0:
+            if pool is None or pool.size == 0:
                 raise HTTPException(
                     status_code=503,
                     detail="AI is not configured. Please enter your Gemini API Key in the Settings tab of the laptop dashboard.",
