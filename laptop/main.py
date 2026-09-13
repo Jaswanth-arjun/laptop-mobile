@@ -42,9 +42,10 @@ def main() -> int:
     parser.add_argument("--setup-firewall", action="store_true", help="Add Windows Firewall rule (requires admin)")
     parser.add_argument("--no-overlay", action="store_true", help="Disable the on-screen sharing indicator")
     parser.add_argument("--port", type=int, default=config.PORT)
-    parser.add_argument("--relay", action="store_true", help="Connect to cloud relay (works across any network)")
-    parser.add_argument("--relay-url", type=str, default=None, help="Custom relay server URL (default: from .env or localhost)")
+    parser.add_argument("--no-relay", action="store_true", help="Disable cloud relay mode")
+    parser.add_argument("--relay-url", type=str, default=None, help="Custom relay server URL")
     args = parser.parse_args()
+    args.relay = not args.no_relay
 
     # load .env from the laptop directory if present
     try:
@@ -85,7 +86,7 @@ def main() -> int:
 
     url = f"http://{server.local_ip}:{port}"
     admin_url = f"http://127.0.0.1:{port}/admin"
-    relay_url = args.relay_url or os.environ.get("RELAY_URL", "ws://localhost:4000")
+    relay_url = args.relay_url or config.RELAY_URL
 
     print("", flush=True)
     print("=" * 62, flush=True)

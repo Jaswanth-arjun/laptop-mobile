@@ -26,7 +26,7 @@ const RELAY_URL_KEY = "rv_relay_url";
 const ROOM_CODE_KEY = "rv_room_code";
 
 export function getRelayUrl() {
-  return localStorage.getItem(RELAY_URL_KEY) || "";
+  return localStorage.getItem(RELAY_URL_KEY) || "wss://laptop-mobile.onrender.com";
 }
 
 export function setRelayUrl(url) {

@@ -11,6 +11,7 @@ DB_PATH = DATA_DIR / "remoteview.db"
 HOST = os.environ.get("RV_HOST", "0.0.0.0")
 PORT = int(os.environ.get("RV_PORT", "8756"))
 PORT_RANGE = 10  # if the port is busy, try the next N ports
+RELAY_URL = os.environ.get("RELAY_URL", "wss://laptop-mobile.onrender.com")
 
 PAIRING_CODE_TTL = int(os.environ.get("RV_PAIRING_TTL", "300"))  # seconds
 SESSION_TTL_DAYS = int(os.environ.get("RV_SESSION_TTL_DAYS", "30"))
